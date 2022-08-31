@@ -1,0 +1,239 @@
+install.packages("timetk")
+
+library("readxl")
+library(tidyverse)
+library(ggpubr)
+library(dplyr)
+library(caret)
+library(Metrics)
+library(complexity)
+library(rpart)
+library(party)       # performing regression trees
+library(rpart.plot) 
+library(neuralnet)
+library(forecast)
+library(gains)
+library(MASS)
+library(ggplot2)
+library(corrplot)
+library(tidyquant)
+library(timetk)
+library(tidyselect) 
+library(caTools)# For Linear regression 
+library(car)# To check multicollinearity 
+library(quantmod)
+library(MASS)
+library(corrplot)# plot correlation plot
+library(reshape)
+library(GGally)
+
+
+riot <- read.csv('winstreakdata.csv')
+
+
+
+riot1 <- riot[!(riot$gameMode=="TUTORIAL_MODULE_2" | riot$gameMode =="TUTORIAL_MODULE_1"|
+                  riot$gameMode =="TUTORIAL_MODULE_3"|riot$gameMode =="PRACTICETOOL") ,]
+
+
+riot_main <- riot1[riot1$gameMode== "CLASSIC" |riot1$gameMode== "ARAM" | riot1$gameMode== "URF" , ]
+
+#full list of column names in the selected data:riot_main. done in order to find the target columns which we are going ahead with for testing correlation
+colnames(riot_main)
+
+#carrying our correlation test on selected data to find the best variables 
+for.cor <- riot_main[,c(11:72,93:104,118:129)]
+colnames(for.cor)
+fullCor<- cor(for.cor[,c(4:8,12:20,22:25,28,29,31:33,41:43,45:57,59:74,77:83,86)])
+
+head(riot_main)
+head(for.full)
+
+
+#merging the table accordinng to PUUID
+
+a <- data.frame(aggregate(riot_main$timePlayed, by=list(puuid=riot_main$puuid), FUN=mean)) 
+names(a) <- c('puuid','timeplayed')
+
+b <- data.frame(aggregate(riot_main$itemsPurchased, by=list(puuid=riot_main$puuid), FUN=mean))
+names(b) <- c('puuid','itemsPurchased')
+
+c <- data.frame(aggregate(riot_main$longestTimeSpentLiving, by=list(puuid=riot_main$puuid), FUN=mean))
+names(c) <- c('puuid','longestTimeSpentLiving')
+
+d <- data.frame(aggregate(riot_main$totalMinionsKilled, by=list(puuid=riot_main$puuid), FUN=mean))
+names(d) <- c('puuid','totalMinionsKilled')
+
+e <- data.frame(aggregate(riot_main$champLevel, by=list(puuid=riot_main$puuid), FUN=mean))
+names(e) <- c('puuid','champLevel')
+
+
+f <- data.frame(aggregate(riot_main$totalDamageDealt, by=list(puuid=riot_main$puuid), FUN=mean))
+names(f) <- c('puuid','totalDamageDealt')
+
+
+g <- data.frame(aggregate(riot_main$consumablesPurchased, by=list(puuid=riot_main$puuid), FUN=mean))
+names(g) <- c('puuid','consumablesPurchased')
+
+h <- data.frame(aggregate(riot_main$goldSpent, by=list(puuid=riot_main$puuid), FUN=mean))
+names(h) <- c('puuid','goldSpent')
+
+i <- data.frame(aggregate(riot_main$totalTimeSpentDead, by=list(puuid=riot_main$puuid), FUN=mean))
+names(i) <- c('puuid','totalTimeSpentDead')
+
+
+j <- data.frame(aggregate(riot_main$detectorWardsPlaced, by=list(puuid=riot_main$puuid), FUN=mean))
+names(j) <- c('puuid','detectorWardsPlaced')
+
+
+ab <- merge(a,b,by = intersect(names(a), names(b)),
+            by.a = by, by.b = by, all = FALSE, all.a = all, all.b = all,
+            sort = TRUE, suffixes = c(".a",".b"), no.dups = TRUE,
+            incomparables = NULL)
+cd <-  merge(c,d,by = intersect(names(c), names(d)),
+             by.c = by, by.d = by, all = FALSE, all.c = all, all.d = all,
+             sort = TRUE, suffixes = c(".c",".d"), no.dups = TRUE,
+             incomparables = NULL)
+
+ef <- merge(e,f,by = intersect(names(e), names(f)),
+            by.e = by, by.f = by, all = FALSE, all.e = all, all.f = all,
+            sort = TRUE, suffixes = c(".e",".f"), no.dups = TRUE,
+            incomparables = NULL)
+gh <-  merge(g,h,by = intersect(names(g), names(h)),
+             by.g = by, by.h = by, all = FALSE, all.g = all, all.h = all,
+             sort = TRUE, suffixes = c(".g",".h"), no.dups = TRUE,
+             incomparables = NULL)
+
+ij <- merge(i,j,by = intersect(names(i), names(j)),
+            by.i = by, by.j = by, all = FALSE, all.i = all, all.j = all,
+            sort = TRUE, suffixes = c(".i",".j"), no.dups = TRUE,
+            incomparables = NULL)
+
+X <- merge(ab,cd,by = intersect(names(ab), names(cd)),
+           by.ab = by, by.cd = by, all = FALSE, all.ab = all, all.cd = all,
+           sort = TRUE, suffixes = c(".ab",".cd"), no.dups = TRUE,
+           incomparables = NULL)
+
+Y <- merge (ef,gh , by = intersect(names(ef), names(gh)),
+            by.ef = by, by.gh = by, all = FALSE, all.ef = all, all.gh = all,
+            sort = TRUE, suffixes = c(".ef",".gh"), no.dups = TRUE,
+            incomparables = NULL)
+
+z <-merge (X,Y , by = intersect(names(X), names(Y)),
+           by.X = by, by.Y = by, all = FALSE, all.X = all, all.Y = all,
+           sort = TRUE, suffixes = c(".X",".Y"), no.dups = TRUE,
+           incomparables = NULL)
+
+
+combined.main.table <- merge (z,ij , by = intersect(names(z), names(ij)),
+                              by.z = by, by.ij = by, all = FALSE, all.z = all, all.ij = all,
+                              sort = TRUE, suffixes = c(".z",".ij"), no.dups = TRUE,
+                              incomparables = NULL)
+
+plot1 <- combined.main.table[,c(3:11)]
+vari <- cor(plot1)
+
+#a ggpairs plot which inclused,scatterplot, density plot as well as 
+#the correlations of all the variables
+ggpairs(combined.main.table,columns = 2:11)
+
+#singlular ggplots of the vriables
+ggplot(combined.main.table, aes(x=timeplayed , y =itemsPurchased)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+ggplot(combined.main.table, aes(x=timeplayed , y =longestTimeSpentLiving)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+ggplot(combined.main.table, aes(x=timeplayed , y =totalDamageDealt)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+ggplot(combined.main.table, aes(x=timeplayed , y = champLevel)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+ggplot(combined.main.table, aes(x=timeplayed , y = detectorWardsPlaced)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+ggplot(combined.main.table, aes(x=timeplayed , y = consumablesPurchased)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+
+ggplot(combined.main.table, aes(x=timeplayed , y =totalTimeSpentDead)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+ggplot(combined.main.table, aes(x=timeplayed , y =goldSpent)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+ggplot(combined.main.table, aes(x=timeplayed , y =totalMinionsKilled)) +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+
+
+colnames(combined.main.table)
+
+#correlation in the grouped data 
+#longestTimeSpentLiving,totalMinionsKilled,totalDamageDealt,consumablesPurchased ,detectorWardsPlaced are >0.5
+
+res <- cor(combined.main.table[,c(2:11)])
+round(res, 2)             
+
+#Corrplot of the full dataset 
+corrplot(res,method='circle') 
+
+
+#a correlation plot to check for Multicollinearity in the data
+res.multicoli <- data.frame(combined.main.table[,c(3:11)])
+
+corrplot(vari,method = 'circle' )
+corrplot(vari,method = 'number' )
+
+
+
+#building a regression model
+regression <- lm(timeplayed ~  longestTimeSpentLiving +totalDamageDealt + totalMinionsKilled+
+                   detectorWardsPlaced+consumablesPurchased , data = combined.main.table)
+summary(regression)
+plot(regression0)+abline()
+
+regression1 <- lm(timeplayed ~  longestTimeSpentLiving +totalDamageDealt, data = combined.main.table)
+summary(regression1)
+
+
+#least variables : max results
+regression5 <-  lm(formula = timeplayed ~ longestTimeSpentLiving + itemsPurchased + 
+                     totalDamageDealt+totalTimeSpentDead + goldSpent, data = combined.main.table)
+summary(regression5)
+
+vif(regression5)
+
+#all variables: best possible
+regression6 <- lm(timeplayed ~  longestTimeSpentLiving + itemsPurchased + 
+                    totalTimeSpentDead + goldSpent + consumablesPurchased
+                  +detectorWardsPlaced + champLevel+totalMinionsKilled+totalDamageDealt,
+                  data = combined.main.table)
+summary(regression6)
+
+vif(regression6)
+
+#extra regression models which were tried for the project 
+regression2 <- lm(timeplayed ~ longestTimeSpentLiving +totalDamageDealt  +itemsPurchased +totalMinionsKilled , 
+                  data = combined.main.table)
+summary(regression2)
+
+regression3 <- lm(timeplayed ~ longestTimeSpentLiving +totalDamageDealt 
+                  + itemsPurchased  ,
+                  data = combined.main.table)
+summary(regression3)
+
+regression4 <- lm(timeplayed ~  longestTimeSpentLiving +  
+                    itemsPurchased + totalTimeSpentDead
+                  + goldSpent
+                  , data = combined.main.table)
+summary(regression4)
