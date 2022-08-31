@@ -28,7 +28,7 @@ library(reshape)
 library(GGally)
 
 
-riot <- read.csv('winstreakdata.csv')
+riot <- read.csv('Dataset_RIOTGames.csv')
 
 
 
