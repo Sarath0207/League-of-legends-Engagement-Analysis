@@ -15,7 +15,7 @@ library(timetk)
 print(getwd())
 
 #which( colnames(raw_data)=="championID" )
-raw_data <- read.csv('u60_player_game_info_combined.csv')
+raw_data <- read.csv('Dataset_RIOTGames.csv')
 
 #need to get rid of big outliers for duration
 outliers <- boxplot(raw_data$gameDuration, plot = FALSE)$out
